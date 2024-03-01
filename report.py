@@ -87,6 +87,18 @@ def save_orf_information(orfs, protein_sequences):
     proteins_file.close()
     coordinates_file.close()
 
+def calculate_overlap(start, end):
+    max_overlap = 0
+    with open('orf_coordinates.txt', 'r') as orf_file:
+        for line in orf_file:
+            line = line.strip().split(',')
+            orf_start = int(line[0])
+            orf_end = int(line[1])
+            if(orf_start >= start and orf_end <= end):
+                overlap = ((orf_end-orf_start) / (end-start)) * 100
+                max_overlap = max(max_overlap, overlap)
+    return max_overlap
+
 # Main script
 fasta_file = 'sequence_chr1.fasta'
 sequence = read_fasta(fasta_file)
@@ -125,3 +137,15 @@ save_orf_information(orfs_positive, protein_sequences_positive)
 save_orf_information(orfs_negative_adjusted, protein_sequences_negative)
 
 print(f"\nIdentified and saved information for {len(orfs_positive) + len(orfs_negative)} ORFs.")
+
+# Overlap with annotation
+with open('genes_chr1.gtf', 'r') as genes_file:
+    for line in genes_file:
+        line = line.strip().split('\t')
+        type = line[2]
+        if(type == 'exon'):
+            start_codon = int(line[3])
+            end_codon = int(line[4])
+            percentage = calculate_overlap(start_codon, end_codon)
+            gene_id = line[8].split(';')[0].split(' ')[1].replace('"', '')
+            print(f"{gene_id} {percentage}%")
