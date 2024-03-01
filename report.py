@@ -5,6 +5,7 @@ def read_fasta(file_path):
         for line in file:
             if not line.startswith('>'):
                 sequence += line.strip()
+    file.close()
     return sequence
 
 def reverse_complement(seq):
@@ -22,14 +23,13 @@ def calculate_statistics(seq):
     
     codon_count = {}
     for i in range(0, len(seq), 3):
-        codon = seq[i:i+3]
-        if codon in codon_count:
-            codon_count[codon] += 1
-        else:
-            codon_count[codon] = 1
+        # checks if codon has 3 bases (end of sequence codons may not have 3 bases)
+        if(len(seq[i:i+3]) == 3):
+           codon = seq[i:i+3]
+           codon_count[codon] = codon_count.get(codon, 0) + 1
 
-    most_frequent_codon = max(codon_count, key=codon_count.get), max(codon_count.values())
-    least_frequent_codon = min(codon_count, key=codon_count.get), min(codon_count.values())
+    most_frequent_codon = max(codon_count, key=codon_count.get), codon_count[max(codon_count, key=codon_count.get)]
+    least_frequent_codon = min(codon_count, key=codon_count.get), codon_count[min(codon_count, key=codon_count.get)]
     
     return length, freq, gc_content, start_codons, stop_codons, most_frequent_codon, least_frequent_codon
 
@@ -50,23 +50,51 @@ def find_orfs(sequence):
     return orfs, protein_sequences
 
 def translate_to_protein(dna_sequence):
-    # Simple translation (mock function for demonstration; doesn't cover real translation)
-    return ''.join(['X' for _ in range(0, len(dna_sequence), 3)])
+    # Translates sequence to protein using an internal dictionary with the standard genetic code.
+    tc = {"GCT":"A", "GCC":"A", "GCA":"A", "GCG":"A",
+      "TGT":"C", "TGC":"C",
+      "GAT":"D", "GAC":"D",
+      "GAA":"E", "GAG":"E",
+      "TTT":"F", "TTC":"F",
+      "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",
+      "CAT":"H", "CAC":"H",
+      "ATA":"I", "ATT":"I", "ATC":"I",
+      "AAA":"K", "AAG":"K",
+      "TTA":"L", "TTG":"L", "CTT":"L", "CTC":"L", "CTA":"L", "CTG":"L",
+      "ATG":"M", "AAT":"N", "AAC":"N",
+      "CCT":"P", "CCC":"P", "CCA":"P", "CCG":"P",
+      "CAA":"Q", "CAG":"Q",
+      "CGT":"R", "CGC":"R", "CGA":"R", "CGG":"R", "AGA":"R", "AGG":"R",
+      "TCT":"S", "TCC":"S", "TCA":"S", "TCG":"S", "AGT":"S", "AGC":"S",
+      "ACT":"T", "ACC":"T", "ACA":"T", "ACG":"T",
+      "GTT":"V", "GTC":"V", "GTA":"V", "GTG":"V",
+      "TGG":"W",
+      "TAT":"Y", "TAC":"Y",
+      "TAA":"_", "TAG":"_", "TGA":"_"}
+    
+    translated = ''
+    for i in range(0, len(dna_sequence), 3):
+        if(dna_sequence[i:i+3] in tc):
+            translated += tc[dna_sequence[i:i+3]]
+
+    return translated
 
 def save_orf_information(orfs, protein_sequences):
     with open('all_potential_proteins.fasta', 'w') as proteins_file, open('orf_coordinates.txt', 'w') as coordinates_file:
         for idx, (orf, protein) in enumerate(zip(orfs, protein_sequences), start=1):
             proteins_file.write(f'>Protein_ORF{idx}\n{protein}\n')
             coordinates_file.write(f'{orf[0]}, {orf[1]}, ORF{idx}\n')
+    proteins_file.close()
+    coordinates_file.close()
 
 # Main script
-fasta_file = 'BioInformatica/bioinformatics/sequence_chr1.fasta'
+fasta_file = 'sequence_chr1.fasta'
 sequence = read_fasta(fasta_file)
 reverse_sequence = reverse_complement(sequence)
 
 # Calculate statistics for both strands
 stats_positive = calculate_statistics(sequence)
-stats_negative = calculate_statistics(reverse_sequence.replace('T', 'U'))
+stats_negative = calculate_statistics(reverse_sequence)
 
 # Output statistics
 print("Positive Strand Statistics:")
@@ -75,15 +103,15 @@ print(f"2. Frequency (in %) of A, C, G, T: {stats_positive[1]}")
 print(f"3. GC content: {stats_positive[2]}")
 print(f"4. Number of Start (AUG) codons found: {stats_positive[3]}")
 print(f"5. Number of Stop Codons (UAA, UAG, UGA): {stats_positive[4]}")
-print(f"6. Most and least frequent codons: {stats_positive[5][0]} ({stats_positive[5][1]}), {stats_positive[6][0]} ({stats_positive[6][1]})")
+print(f"6. Most and least frequent codons: {stats_positive[5][0]} {stats_positive[5][1]}, {stats_positive[6][0]}, {stats_positive[6][1]}")
 
 print("\nNegative Strand Statistics:")
 print(f"1. Length of the sequence: {stats_negative[0]}")
-print(f"2. Frequency (in %) of A, C, G, U: {stats_negative[1]}")  # Note the U for RNA
+print(f"2. Frequency (in %) of A, C, G, T: {stats_negative[1]}")
 print(f"3. GC content: {stats_negative[2]}")
 print(f"4. Number of Start (AUG) codons found: {stats_negative[3]}")
 print(f"5. Number of Stop Codons (UAA, UAG, UGA): {stats_negative[4]}")
-print(f"6. Most and least frequent codons: {stats_negative[5][0]} ({stats_negative[5][1]}), {stats_negative[6][0]} ({stats_negative[6][1]})")
+print(f"6. Most and least frequent codons: {stats_negative[5][0]} {stats_negative[5][1]}, {stats_negative[6][0]} {stats_negative[6][1]}")
 
 # Identify ORFs for both strands
 orfs_positive, protein_sequences_positive = find_orfs(sequence)
