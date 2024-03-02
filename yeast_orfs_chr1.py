@@ -95,7 +95,7 @@ class Orfs:
                     orfs.append((i+1, j+3))  # Adding 1 to start for 1-based indexing
                     protein_sequences.append(self._translation(dna_sequence[i:j+3]))
                 break
-        if strand == '-': # Is this a thing?
+        if strand == '-':  # Is this a thing?
             orfs = [(len(dna_sequence) - orf[1] + 1, len(dna_sequence) - orf[0] + 1) for orf in orfs]
         return orfs, protein_sequences
 
@@ -156,14 +156,15 @@ class Overlap:
     """Contains the implementations for exercise 9."""
     def __init__(self, file_path):
         self.file_path = file_path
+
     def read_exons(self):
         """Extracts every id, start and end position of an exon from an annotation file."""
         exons = []
         with open(self.file_path, 'r') as file:
             for line in file:
                 line = line.split('\t')
-                type = line[2]
-                if type != 'exon':
+                identifier = line[2]
+                if identifier != 'exon':
                     continue
                 start_codon = int(line[3])
                 end_codon = int(line[4])
