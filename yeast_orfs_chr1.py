@@ -13,8 +13,9 @@ from sys import argv
 
 
 class DNA:
-    def __init__(self, file_path):
+    def __init__(self, file_path, window):
         self.file_path = file_path
+        self.window = window
 
     def read(self):
         """Reads a FASTA file and returns the sequence."""
@@ -24,7 +25,7 @@ class DNA:
                 if line[0] != '>':
                     dna_sequence += line.strip()
         file.close()
-        return dna_sequence
+        return dna_sequence[:self.window]
 
     def reverse_complement(self, dna_sequence):
         """Returns the reverse complement of a DNA sequence."""
@@ -43,7 +44,7 @@ class Statistics:
 
         length = len(dna_sequence)
         frequency = {base: round(dna_sequence.count(base) / length * 100, 2) for base in 'ACGT'}
-        gc_content = round((frequency['G'] + frequency['C']) / length * 100, 2)
+        gc_content = round(frequency['G'] + frequency['C'], 2)
         start_codons = dna_sequence.count('ATG')
         stop_codons = dna_sequence.count('TAA') + dna_sequence.count('TAG') + dna_sequence.count('TGA')
         most_frequent_codon = max(codon_count, key=codon_count.get)
@@ -84,19 +85,26 @@ class Orfs:
         stop_codons = ['TAA', 'TAG', 'TGA']
         orfs = []
         protein_sequences = []
-        for i in range(len(dna_sequence)-2):
-            if dna_sequence[i:i+3] != start_codon:
-                continue
-            for j in range(i, len(dna_sequence)-2, 3):
-                if dna_sequence[j:j+3] not in stop_codons:
+        for offset in [0, 1, 2]:
+            dna_sequence_shifted = dna_sequence[offset:]
+            last_stop = -1
+            for i in range(0, len(dna_sequence_shifted)-2, 3):
+                if i < last_stop:
                     continue
-                orf_length = j + 3 - i
-                if orf_length >= 150:
-                    orfs.append((i+1, j+3))  # Adding 1 to start for 1-based indexing
-                    protein_sequences.append(self._translation(dna_sequence[i:j+3]))
-                break
-        if strand == '-':  # Is this a thing?
-            orfs = [(len(dna_sequence) - orf[1] + 1, len(dna_sequence) - orf[0] + 1) for orf in orfs]
+                if dna_sequence_shifted[i:i+3] != start_codon:
+                    continue
+                for j in range(i, len(dna_sequence_shifted)-2, 3):
+                    if dna_sequence_shifted[j:j+3] not in stop_codons:
+                        continue
+                    orf_length = j+3-i
+                    assert orf_length%3==0
+                    if orf_length >= 150:
+                        orfs.append((i+offset+1, j+offset+3))
+                        protein_sequences.append(self._translation(dna_sequence_shifted[i:j+3]))
+                        last_stop = j+2
+                    break
+        if strand == '-':
+            orfs = [(len(dna_sequence) - orf[1] + 1, len(dna_sequence) - orf[0]+1) for orf in orfs]
         return orfs, protein_sequences
 
     def _translation(self, dna_sequence):
@@ -123,11 +131,11 @@ class Orfs:
               'TAA': '_', 'TAG': '_', 'TGA': '_'}
         protein_sequence = ''
         for i in range(0, len(dna_sequence), 3):
-            codon = dna_sequence[i:i + 3]
+            codon = dna_sequence[i:i+3]
             if codon in tc:
                 protein_sequence += tc[codon]
             else:
-                raise Exception("Invalid DNA sequence.")  # Right?
+                raise Exception("Invalid DNA sequence.")
         return protein_sequence
 
     def read(self):
@@ -141,15 +149,18 @@ class Orfs:
                 orfs.append((orf_start, orf_end))
         return orfs
 
-    def save(self, orfs, protein_sequences, strand):
+    def save(self, positive_orfs, positive_protein_sequences, negative_orfs, negative_protein_sequences):
+        temp_orfs = list(zip(positive_orfs, positive_protein_sequences)) + list(zip(negative_orfs, negative_protein_sequences))
+        temp_orfs = sorted(temp_orfs, key=lambda x: x[0][0])
+        orfs = [temp_orf[0] for temp_orf in temp_orfs]
+        protein_sequences = [temp_orf[1] for temp_orf in temp_orfs]
         """Stores Protein sequences and respective coordinates from a DNA sequence into files."""
         with open(self.proteins_file_path, 'w+') as proteins_file, open(self.coordinates_file_path, 'w+') as coordinates_file:
-            for i, (orf, protein) in enumerate(zip(orfs, protein_sequences), start=1):
+            for i, (orf, protein) in enumerate(zip(orfs, protein_sequences)):
                 proteins_file.write(f'{protein}\n')
                 coordinates_file.write(f'{orf[0]}, {orf[1]}, ORF{i}\n')
         proteins_file.close()
         coordinates_file.close()
-        print(f'\nIdentified and saved protein sequences for {"positive" if strand == "+" else "negative"} ORFs.')
 
 
 class Overlap:
@@ -203,7 +214,7 @@ class Overlap:
 if __name__ == '__main__':
     # Get both strands from a DNA sequence
     fasta_file = argv[1]
-    dna = DNA(fasta_file)
+    dna = DNA(fasta_file, window=30000)
     dna_sequence = dna.read()
     reverse_dna_sequence = dna.reverse_complement(dna_sequence)
 
@@ -218,8 +229,7 @@ if __name__ == '__main__':
     orfs = Orfs()
     positive_orfs, positive_protein_sequences = orfs.find(dna_sequence, strand='+')
     negative_orfs, negative_protein_sequences = orfs.find(reverse_dna_sequence, strand='-')
-    orfs.save(positive_orfs, positive_protein_sequences, strand='+')
-    orfs.save(negative_orfs, negative_protein_sequences, strand='-')
+    orfs.save(positive_orfs, positive_protein_sequences, negative_orfs, negative_protein_sequences)
 
     # Overlap with annotation
     annotation_file = argv[2]
