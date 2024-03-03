@@ -4,9 +4,9 @@ Group Assignment I
 Group E
 
 Members:
-- Ana Sofia de Castro Teixeira - 201906031 - MIERSI
+- Ana Sofia de Castro Teixeira - 201906031 - MERSI
 - Guilherme Manuel Carvalho de Melo Duarte - 201905583 - M:CC
-- José Miguel Ferreira Carvalho - 202005827 - MIERSI
+- José Miguel Ferreira Carvalho - 202005827 - MERSI
 """
 
 from sys import argv
@@ -76,7 +76,7 @@ class Statistics:
 class Orfs:
     """Contains the implementations for exercises 7-8."""
     def __init__(self):
-        self.proteins_file_path = 'all_potential_proteins.txt'
+        self.proteins_file_path = 'all_potential_proteins.fasta'
         self.coordinates_file_path = 'orf_coordinates.txt'
 
     def find(self, dna_sequence, strand):
