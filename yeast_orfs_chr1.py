@@ -66,7 +66,9 @@ class Statistics:
             print('\nNegative Strand Statistics:')
 
         print(f'1. Length of the sequence: {stats["length"]}')
-        print(f'2. Frequency (in %) of A, C, G, T: {stats["frequency"]}')
+        print(f'2. Frequency of A, C, G, T:')
+        for base in 'ACGT':
+            print(f'\t- {base}: {stats["frequency"][base]}%')
         print(f'3. GC content: {stats["gc_content"]}%')
         print(f'4. Number of Start (AUG) codons found: {stats["start_codons"]}')
         print(f'5. Number of Stop Codons (UAA, UAG, UGA): {stats["stop_codons"]}')
@@ -97,7 +99,6 @@ class Orfs:
                     if dna_sequence_shifted[j:j+3] not in stop_codons:
                         continue
                     orf_length = j+3-i
-                    assert orf_length%3==0
                     if orf_length >= 150:
                         orfs.append((i+offset+1, j+offset+3))
                         protein_sequences.append(self._translation(dna_sequence_shifted[i:j+3]))
@@ -156,8 +157,8 @@ class Orfs:
         protein_sequences = [temp_orf[1] for temp_orf in temp_orfs]
         """Stores Protein sequences and respective coordinates from a DNA sequence into files."""
         with open(self.proteins_file_path, 'w+') as proteins_file, open(self.coordinates_file_path, 'w+') as coordinates_file:
-            for i, (orf, protein) in enumerate(zip(orfs, protein_sequences)):
-                proteins_file.write(f'{protein}\n')
+            for i, (orf, protein) in enumerate(zip(orfs, protein_sequences), start=1):
+                proteins_file.write(f'>Protein_ORF{i} {protein}\n')
                 coordinates_file.write(f'{orf[0]}, {orf[1]}, ORF{i}\n')
         proteins_file.close()
         coordinates_file.close()
