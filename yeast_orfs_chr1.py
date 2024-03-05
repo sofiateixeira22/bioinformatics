@@ -65,14 +65,14 @@ class Statistics:
         else:
             print('\nNegative Strand Statistics:')
 
-        print(f'1. Length of the sequence: {stats["length"]}')
-        print(f'2. Frequency of A, C, G, T:')
+        print(f'\t1. Length of the sequence: {stats["length"]}')
+        print(f'\t2. Frequency of A, C, G, T:')
         for base in 'ACGT':
-            print(f'\t- {base}: {stats["frequency"][base]}%')
-        print(f'3. GC content: {stats["gc_content"]}%')
-        print(f'4. Number of Start (AUG) codons found: {stats["start_codons"]}')
-        print(f'5. Number of Stop Codons (UAA, UAG, UGA): {stats["stop_codons"]}')
-        print(f'6. Most and least frequent codons: {stats["most_frequent_codon"]}, {stats["least_frequent_codon"]}')
+            print(f'\t\t- {base}: {stats["frequency"][base]}%')
+        print(f'\t3. GC content: {stats["gc_content"]}%')
+        print(f'\t4. Number of Start (AUG) codons found: {stats["start_codons"]}')
+        print(f'\t5. Number of Stop Codons (UAA, UAG, UGA): {stats["stop_codons"]}')
+        print(f'\t6. Most and least frequent codons: {stats["most_frequent_codon"]}, {stats["least_frequent_codon"]}')
 
 
 class Orfs:
