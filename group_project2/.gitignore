@@ -1,1 +1,5 @@
 sequence.fasta
+sequences_to_analyse.fasta
+venv
+.DS_Store
+.idea
