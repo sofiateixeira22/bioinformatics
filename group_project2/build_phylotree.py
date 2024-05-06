@@ -2,15 +2,22 @@ from requests import get, post
 from sys import argv
 from time import sleep
 
-from Bio import SeqIO
+import matplotlib.pyplot as plt
+
+from Bio import SeqIO, AlignIO
+from Bio import Phylo
 from Bio.Blast import NCBIWWW, NCBIXML
+from Bio.Phylo.TreeConstruction import DistanceCalculator, DistanceTreeConstructor
 
 UNIPROT_URL = 'https://rest.uniprot.org/uniprotkb/'
 EBI_URL = 'https://www.ebi.ac.uk/Tools/services/rest/clustalo'
-MAX_SPECIES = 10
+
 SEQUENCE_FASTA_FILE = 'sequence.fasta'
 TOP_SEQUENCE_FASTA_FILE = 'sequences_to_analyse.fasta'
 ALIGNMENT_FILE = 'alignment.txt'
+TREE_FILE = 'phylotree.png'
+
+MAX_SPECIES = 10
 
 
 def do_request(method, url, command=None, parameters=None):
@@ -28,30 +35,30 @@ def do_request(method, url, command=None, parameters=None):
         return None
 
 
+def save_fasta(seq_ids, sequences, output_file):
+    print(f'\t> Saving sequence{"s" if len(seq_ids) > 1 else ""} in {output_file}')
+    with open(output_file, 'w') as f:
+        for seq_id, sequence in zip(seq_ids, sequences):
+            f.write(f'>{seq_id.replace(" ", "-")}\n{sequence}\n')
+
+
 class Phylogenetics:
     def __init__(self, seq_id):
         self.seq_id = seq_id
-        self.seq_info = None
-
-    @staticmethod
-    def _save_sequence_fasta(seq_ids, sequences, output_file):
-        print(f'\t> Saving sequence{"s" if len(seq_ids) > 1 else ""} in {output_file}')
-        with open(output_file, 'w') as f:
-            for seq_id, sequence in zip(seq_ids, sequences):
-                f.write(f'>{seq_id.replace(" ", "-")}\n{sequence}\n')
 
     def data_collection(self):
         try:
             results = do_request('get', UNIPROT_URL, f'/search?query={self.seq_id}')
-            self.seq_info = results.json()['results'][0]
-            species = self.seq_info['organism']['scientificName']
+            seq_info = results.json()['results'][0]
+            species = seq_info['organism']['scientificName']
             print(f'> Found match on UniProt database for species {species}')
-            sequence = self.seq_info['sequence']['value']
-            self._save_sequence_fasta([species], [sequence], SEQUENCE_FASTA_FILE)
+            sequence = seq_info['sequence']['value']
+            save_fasta([species], [sequence], SEQUENCE_FASTA_FILE)
         except:
             print(f'> No results found with the sequence ID {seq_id}')
 
-    def BLAST_analysis(self):
+    @staticmethod
+    def BLAST_analysis():
         print('> Performing a BLAST search')
         sequence = SeqIO.read(SEQUENCE_FASTA_FILE, 'fasta').seq
 
@@ -86,7 +93,7 @@ class Phylogenetics:
         best_species = sorted(species_score.items(), key=lambda x: x[1], reverse=True)
         best_species = [species[0] for species in best_species[:(min(len(best_species), MAX_SPECIES))]]
         best_species_sequence = [species_sequence[species] for species in best_species]
-        self._save_sequence_fasta(best_species, best_species_sequence, TOP_SEQUENCE_FASTA_FILE)
+        save_fasta(best_species, best_species_sequence, TOP_SEQUENCE_FASTA_FILE)
 
     @staticmethod
     def multiple_sequence_alignment():
@@ -121,13 +128,32 @@ class Phylogenetics:
 
         with open(ALIGNMENT_FILE, "w") as f:
             f.write(result)
-        print(f'\t> Result saved on {ALIGNMENT_FILE}')
+        print(f'\t> Saving results on {ALIGNMENT_FILE}')
+
+    @staticmethod
+    def phylogenetic_tree():
+        print('> Building Phylogenetic Tree')
+        alignment = AlignIO.read(ALIGNMENT_FILE, 'clustal')
+
+        calculator = DistanceCalculator('identity')
+        distance_matrix = calculator.get_distance(alignment)
+
+        tree_constructor = DistanceTreeConstructor()
+        tree = tree_constructor.upgma(distance_matrix)
+
+        plt.rcParams.update({'font.size': 11})
+        figure = plt.figure(figsize=(15, 8))
+        axes = figure.add_subplot(111, xticks=[], yticks=[])
+        Phylo.draw(tree, axes=axes, branch_labels=lambda c: round(c.branch_length, 5), do_show=False)
+        plt.xlabel('')
+        plt.ylabel('')
+        plt.savefig(TREE_FILE, dpi=200, bbox_inches='tight')
+        print(f'\t> Saving tree on {TREE_FILE}')
 
 
 if __name__ == '__main__':
-    seq_id = argv[1]
-
-    phylogenetics = Phylogenetics(seq_id)
+    phylogenetics = Phylogenetics(argv[1])
     phylogenetics.data_collection()
     phylogenetics.BLAST_analysis()
     phylogenetics.multiple_sequence_alignment()
+    phylogenetics.phylogenetic_tree()
