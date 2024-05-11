@@ -52,10 +52,11 @@ class Phylogenetics:
             seq_info = results.json()['results'][0]
             species = seq_info['organism']['scientificName']
             print(f'> Found match on UniProt database for species {species}')
+            print(f'> Gene Name: {seq_info["genes"][0]["geneName"]["value"]}')
             sequence = seq_info['sequence']['value']
             save_fasta([species], [sequence], SEQUENCE_FASTA_FILE)
         except:
-            print(f'> No results found with the sequence ID {seq_id}')
+            print(f'> No results found with the sequence ID {self.seq_id}')
 
     @staticmethod
     def BLAST_analysis():
