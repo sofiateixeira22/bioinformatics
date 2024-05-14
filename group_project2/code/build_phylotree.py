@@ -63,10 +63,6 @@ class Phylogenetics:
         print('> Performing a BLAST search')
         sequence = SeqIO.read(SEQUENCE_FASTA_FILE, 'fasta').seq
 
-        # To delete, but so we understand:
-        #   - blastp: protein blast, for protein vs protein comparison
-        #   - nr: default protein database, stands for non-redundant protein sequences
-
         # print('\t> Queueing server')
         # result_handle = NCBIWWW.qblast(program='blastp', database='nr', sequence=sequence, hitlist_size=250)
         # with open('blast_results.xml', 'w') as out_handle:
@@ -153,6 +149,10 @@ class Phylogenetics:
 
 
 if __name__ == '__main__':
+    if len(argv) <= 1:
+        print('> Add a sequence identifier to the command line...')
+        exit()
+
     phylogenetics = Phylogenetics(argv[1])
     phylogenetics.data_collection()
     phylogenetics.BLAST_analysis()
