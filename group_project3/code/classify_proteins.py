@@ -26,7 +26,6 @@ def generate_mers(k):
 
 def compute_ffp(sequences, k_mers):
     ffp_data = []
-    number_k_mers = len(k_mers)
 
     for seq_id, sequence in sequences.items():
         seq_length = len(sequence)
@@ -36,8 +35,10 @@ def compute_ffp(sequences, k_mers):
             if nucleotides in ffp:
                 ffp[nucleotides] += 1
 
-        for k in ffp:
-            ffp[k] /= number_k_mers
+        total_k_mers = sum(ffp.values())
+        if total_k_mers > 0:
+            for k in ffp:
+                ffp[k] /= total_k_mers
 
         ffp_data.append([seq_id] + [ffp[k] for k in k_mers])
 
